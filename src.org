@@ -1,0 +1,143 @@
+#+OPTIONS: toc:nil title:nil
+
+* typyescript-trial
+Explore the viability of incorporating typescript to the existing workflow by
+making use of JSDoc comments, the =--allowJs= compiler option and =@ts-check=
+comments. The combination has the potential to seamleasly interop with an
+existing codebase, making gradual or optional adoption feasible.
+
+
+** Dependencies and versions used in this document
+- [[https://nodejs.org/en/][nodejs]]: src_sh[:exports results]{node --version} {{{results(=v8.1.0=)}}}
+- [[https://www.npmjs.com/][npm]]: src_sh[:exports results]{npm --version} {{{results(=5.0.3=)}}}
+- [[http://www.typescriptlang.org/][typescript]]: src_sh[:exports results]{./node_modules/.bin/tsc --version} {{{results(=Version 2.3.4=)}}}
+
+** Installation
+Create a package
+#+begin_src sh :results output silent
+  npm init --yes
+#+end_src
+
+Install typescript
+#+BEGIN_SRC sh :results output silent
+  npm install --save-dev typescript
+#+END_SRC
+
+** Setup
+:PROPERTIES:
+:dir:      ~/src/github.com/leo-shopify/typescript-trial/
+:END:
+The previous command installs typescript locally to allow different projects to
+define their own version and manage the upgrade cycle independenty.
+
+Adding an entry to =scripts= in =package.json= is a convenient way to avoid
+=./node_modules/.bin/tsc= (=tsc= is the /typescript compiler/) and setting
+compiler options. e.g.:
+
+#+BEGIN_src json :tangle package.json
+  {
+    "name": "typescript-trial",
+    "version": "1.0.0",
+    "description": "Explore the viability to use typescript",
+    "author": "leo-shopify <leonardo.rojas@shopify.com>",
+    "license": "GPL-3.0",
+    "repository": "https://github.com/leo-shopify/typescript-trial",
+    "issues": "https://github.com/leo-shopify/typescript-trial/issues",
+    "main": "cjs/index.js",
+    "module": "esm/index.js",
+    "dependencies": {},
+    "devDependencies": {
+      "typescript": "^2.3.4"
+    },
+    "scripts": {
+      "tsc": "tsc --allowJs --noEmit --strict"
+    },
+    "eslintConfig": {
+      "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module"
+      },
+      "rules": {
+        "indent": ["warn", 2]
+      }
+    }
+  }
+#+END_src
+
+Settings can also be managed using a [[http://www.typescriptlang.org/docs/handbook/tsconfig-json.html][tsconfig.json]] file.
+
+Create a ~src~ directory:
+#+begin_src sh :results output silent
+  mkdir src
+#+end_src
+
+** Typed /hello world/
+Start with a regular js function:
+#+name: greeter
+#+begin_src js
+  function greeter(person) {
+    return `Hello, ${person}`;
+  }
+#+end_src
+
+- Create a new file ~src/typed-greeter.js~
+- Prepend =// @ts-check= at the beginning of the file.
+- Add types using [[https://github.com/Microsoft/TypeScript/wiki/JSDoc-support-in-JavaScript][jsdoc syntax]].
+
+#+begin_src js :noweb yes :tangle src/typed-greeter.js
+  // @ts-check
+
+  /**
+   ,* @param {string} person
+   ,* @return {string}
+   ,*/
+  <<greeter>>
+
+  greeter('Jane User');
+#+end_src
+
+Run
+#+name: typed-greeter
+#+header: :exports source :results code
+#+begin_src sh
+  npm run tsc -- src/typed-greeter.js
+#+end_src
+
+Which outputs
+#+RESULTS: typed-greeter
+#+BEGIN_SRC sh
+
+> typescript-trial@1.0.0-alpha tsc /Users/leo/src/github.com/leo-shopify/typescript-trial
+> tsc --allowJs --noEmit --strict "src/typed-greeter.js"
+
+#+END_SRC
+
+Create the file ~src/badly-typed-greeter.js~
+#+begin_src js :tangle src/badly-typed-greeter.js
+  // @ts-check
+
+  greeter('Jane User');
+  greeter(null);
+  greeter(99);
+  greeter(['Jane User']);
+#+end_src
+
+Run
+#+name: badly-typed-greeter
+#+header: :exports source :results code :epilogue "echo"
+#+begin_src sh
+  npm run tsc -- src/*.js
+#+end_src
+
+Which outputs
+#+RESULTS: badly-typed-greeter
+#+BEGIN_SRC sh
+
+> typescript-trial@1.0.0-alpha tsc /Users/leo/src/github.com/leo-shopify/typescript-trial
+> tsc --allowJs --noEmit --strict "src/badly-typed-greeter.js" "src/typed-greeter.js"
+
+src/badly-typed-greeter.js(5,9): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
+src/badly-typed-greeter.js(6,9): error TS2345: Argument of type '99' is not assignable to parameter of type 'string'.
+src/badly-typed-greeter.js(7,9): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'string'.
+
+#+END_SRC

@@ -1,0 +1,140 @@
+# Created 2017-06-12 Mon 11:31
+#+OPTIONS: toc:nil title:nil
+#+AUTHOR: leonardo rojas
+
+* typyescript-trial
+Explore the viability of incorporating typescript to the existing workflow by
+making use of JSDoc comments, the =--allowJs= compiler option and =@ts-check=
+comments. The combination has the potential to seamleasly interop with an
+existing codebase, making gradual or optional adoption feasible.
+
+
+** Dependencies and versions used in this document
+- [[https://nodejs.org/en/][nodejs]]: =v8.1.0=
+- [[https://www.npmjs.com/][npm]]: =5.0.3=
+- [[http://www.typescriptlang.org/][typescript]]: =Version 2.3.4=
+
+** Installation
+Create a package
+#+BEGIN_SRC sh
+  npm init --yes
+#+END_SRC
+
+Install typescript
+#+BEGIN_SRC sh
+  npm install --save-dev typescript
+#+END_SRC
+
+** Setup
+The previous command installs typescript locally to allow different projects to
+define their own version and manage the upgrade cycle independenty.
+
+Adding an entry to =scripts= in =package.json= is a convenient way to avoid
+=./node_modules/.bin/tsc= (=tsc= is the /typescript compiler/) and setting
+compiler options. e.g.:
+
+#+BEGIN_SRC json
+  {
+    "name": "typescript-trial",
+    "version": "1.0.0",
+    "description": "Explore the viability to use typescript",
+    "author": "leo-shopify <leonardo.rojas@shopify.com>",
+    "license": "GPL-3.0",
+    "repository": "https://github.com/leo-shopify/typescript-trial",
+    "issues": "https://github.com/leo-shopify/typescript-trial/issues",
+    "main": "cjs/index.js",
+    "module": "esm/index.js",
+    "dependencies": {},
+    "devDependencies": {
+      "typescript": "^2.3.4"
+    },
+    "scripts": {
+      "tsc": "tsc --allowJs --noEmit --strict"
+    },
+    "eslintConfig": {
+      "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module"
+      },
+      "rules": {
+        "indent": ["warn", 2]
+      }
+    }
+  }
+#+END_SRC
+
+Settings can also be managed using a [[http://www.typescriptlang.org/docs/handbook/tsconfig-json.html][tsconfig.json]] file.
+
+Create a ~src~ directory:
+#+BEGIN_SRC sh
+  mkdir src
+#+END_SRC
+
+** Typed /hello world/
+Start with a regular js function:
+#+NAME: greeter
+#+BEGIN_SRC js
+  function greeter(person) {
+    return `Hello, ${person}`;
+  }
+#+END_SRC
+
+- Create a new file ~src/typed-greeter.js~
+- Prepend =// @ts-check= at the beginning of the file.
+- Add types using [[https://github.com/Microsoft/TypeScript/wiki/JSDoc-support-in-JavaScript][jsdoc syntax]].
+
+#+BEGIN_SRC js
+  // @ts-check
+  
+  /**
+   ,* @param {string} person
+   ,* @return {string}
+   ,*/
+  function greeter(person) {
+    return `Hello, ${person}`;
+  }
+  
+  greeter('Jane User');
+#+END_SRC
+
+Run
+#+NAME: typed-greeter
+#+HEADER: :exports source :results code
+#+BEGIN_SRC sh
+  npm run tsc -- src/typed-greeter.js
+#+END_SRC
+
+Which outputs
+#+BEGIN_SRC sh
+  
+  > typescript-trial@1.0.0-alpha tsc /Users/leo/src/github.com/leo-shopify/typescript-trial
+  > tsc --allowJs --noEmit --strict "src/typed-greeter.js"
+#+END_SRC
+
+Create the file ~src/badly-typed-greeter.js~
+#+BEGIN_SRC js
+  // @ts-check
+  
+  greeter('Jane User');
+  greeter(null);
+  greeter(99);
+  greeter(['Jane User']);
+#+END_SRC
+
+Run
+#+NAME: badly-typed-greeter
+#+HEADER: :exports source :results code :epilogue "echo"
+#+BEGIN_SRC sh
+  npm run tsc -- src/*.js
+#+END_SRC
+
+Which outputs
+#+BEGIN_SRC sh
+  
+  > typescript-trial@1.0.0-alpha tsc /Users/leo/src/github.com/leo-shopify/typescript-trial
+  > tsc --allowJs --noEmit --strict "src/badly-typed-greeter.js" "src/typed-greeter.js"
+  
+  src/badly-typed-greeter.js(5,9): error TS2345: Argument of type 'null' is not assignable to parameter of type 'string'.
+  src/badly-typed-greeter.js(6,9): error TS2345: Argument of type '99' is not assignable to parameter of type 'string'.
+  src/badly-typed-greeter.js(7,9): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'string'.
+#+END_SRC
