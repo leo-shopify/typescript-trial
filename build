@@ -2,25 +2,24 @@
 # -*- mode: shell-script -*-
 
 # tangle files with org-mode
-ORG=~/.emacs.d/elpa/org-20170606/
+ORG=`echo ~/.emacs.d/elpa/org*`
 DIR=`pwd`
 IN=src.org
 OUT=README.org
-RX='^\\s-*#\\+RESULT.+\n?'
+RX='^\\s-*#\\+RESULT.+\\n?'
 
-emacs -Q --batch \
-      --eval "(progn
-      (add-to-list 'load-path \"$ORG\")
-      (require 'org)
-      (require 'ob-shell)
-      (find-file (expand-file-name \"$IN\" \"$DIR\"))
-      (org-babel-tangle)
-      (setq org-confirm-babel-evaluate nil)
-      (setq org-babel-load-languages '((emacs-lisp . t) (js . t) (shell . t)))
-      (org-org-export-as-org)
-      (set-visited-file-name \"$OUT\")
-      (goto-char (point-min))
-      (while (re-search-forward \"$RX\" nil t)
-             (replace-match \"\" nil nil))
-      (save-buffer 0)
-      (kill-buffer))"
+emacs --quick --batch --eval "(progn
+  (add-to-list 'load-path \"$ORG\")
+  (require 'org)
+  (require 'ob-shell)
+  (find-file (expand-file-name \"$IN\" \"$DIR\"))
+  (org-babel-tangle)
+  (setq org-confirm-babel-evaluate nil)
+  (setq org-babel-load-languages '((emacs-lisp . t) (js . t) (shell . t)))
+  (org-org-export-as-org)
+  (set-visited-file-name \"$OUT\")
+  (goto-char (point-min))
+  (while (re-search-forward \"$RX\" nil t)
+         (replace-match \"\" nil nil))
+  (save-buffer 0)
+  (kill-buffer))"
